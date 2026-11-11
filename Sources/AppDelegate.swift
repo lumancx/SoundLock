@@ -45,10 +45,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover?.delegate = self
 
         monitor.startMonitoring()
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleShowPopoverRequest(_:)),
+            name: Constants.showPopoverNotification,
+            object: nil
+        )
+        if !launchedAsLoginItem() {
+            showPopoverWhenStatusItemIsLaidOut()
+        }
+    }
+
+    private func showPopoverWhenStatusItemIsLaidOut(attemptsLeft: Int = 30) {
+        guard attemptsLeft > 0, statusItem?.button?.window?.frame.height == 0 else {
+            showPopover()
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.showPopoverWhenStatusItemIsLaidOut(attemptsLeft: attemptsLeft - 1)
+        }
+    }
+
+    private func launchedAsLoginItem() -> Bool {
+        guard let event = NSAppleEventManager.shared().currentAppleEvent,
+              event.eventID == AEEventID(kAEOpenApplication) else { return false }
+        return event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue
+            == OSType(keyAELaunchedAsLogInItem)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showPopover()
+        return false
+    }
+
+    @objc private func handleShowPopoverRequest(_ notification: Notification) {
+        showPopover()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         NotificationCenter.default.removeObserver(self)
+        DistributedNotificationCenter.default().removeObserver(self)
         stopEventMonitors()
         closePopover(notification)
         monitor.stopMonitoring()
@@ -140,11 +177,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     @objc func togglePopover(_ sender: Any?) {
-        guard let button = statusItem?.button, let popover else { return }
-        if popover.isShown {
+        if popover?.isShown == true {
             closePopover(sender)
-            return
+        } else {
+            showPopover()
         }
+    }
+
+    private func showPopover() {
+        guard let button = statusItem?.button, let popover, !popover.isShown else { return }
         let screen = button.window?.screen ?? NSScreen.main
         let maxHeight = (screen?.visibleFrame.height ?? 800) - Constants.UI.popoverEdgeInset
         let ideal = hostingController?.sizeThatFits(

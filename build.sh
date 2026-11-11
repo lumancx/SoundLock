@@ -75,6 +75,11 @@ cp "StatusIconUnlocked.png"  "$BUNDLE/Contents/Resources/StatusIconUnlocked.png"
 rm "$APP_NAME"
 rm -f "StatusIcon.png" "StatusIconUnlocked.png"
 
+echo "==> Ad-hoc signing $BUNDLE..."
+xattr -cr "$BUNDLE"
+codesign --force --sign - "$BUNDLE"
+codesign --verify --strict "$BUNDLE"
+
 echo ""
 echo "✅  Done!  open $BUNDLE"
 echo ""

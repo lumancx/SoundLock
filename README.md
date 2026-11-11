@@ -124,9 +124,9 @@ SoundLock is built around a single principle: do nothing unless the system tells
 ### First launch — approving the app
 
 This build is not yet notarized by Apple, so macOS Gatekeeper blocks it on first
-launch with a *"cannot be opened"* or *"is damaged"* warning. This is expected — the
-app is safe (it ships no network code; see [Privacy](#privacy)). Approve it **once**
-and macOS remembers it forever:
+launch with a *"cannot be opened"* or *"Apple could not verify"* warning. This is
+expected — the app is safe (it ships no network code; see [Privacy](#privacy)).
+Approve it **once** and macOS remembers it forever:
 
 **macOS 14 Sonoma and earlier**
 - Right-click (or Control-click) `SoundLock.app` → **Open** → **Open** in the dialog.
@@ -142,6 +142,13 @@ and macOS remembers it forever:
 xattr -dr com.apple.quarantine /Applications/SoundLock.app
 ```
 Then open the app normally.
+
+If macOS says the app *"is damaged"* and **Open Anyway** never appears (seen with
+v1.0.0 on macOS 26 Tahoe), use the Terminal command above — that build's code
+signature was incomplete. Later builds are fully ad-hoc signed and show **Open Anyway**.
+
+On launch SoundLock opens its popover from the menu bar icon; opening the app again
+while it is running shows the popover too.
 
 ---
 

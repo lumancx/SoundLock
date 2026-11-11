@@ -2,6 +2,8 @@ import CoreGraphics
 import Foundation
 
 enum Constants {
+    static let showPopoverNotification = Notification.Name((Bundle.main.bundleIdentifier ?? "SoundLock") + ".showPopover")
+
     enum Timing {
         static let saveDebounce: TimeInterval = 0.3
         static let btRecoveryDelays: [TimeInterval] = [0.5, 1.5, 3.5]
