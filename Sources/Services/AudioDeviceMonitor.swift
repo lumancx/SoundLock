@@ -137,6 +137,8 @@ final class AudioDeviceMonitor: ObservableObject {
     func removeFromPriority(stableKey: String, input: Bool) {
         if input { priorityInputList.removeAll { $0.identityKey(input: true) == stableKey } }
         else      { priorityOutputList.removeAll { $0.identityKey(input: false) == stableKey } }
+        assertPriority(input: input)
+        syncAudioState()
     }
 
     func movePriority(from: IndexSet, to: Int, input: Bool) {
