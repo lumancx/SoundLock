@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://mancan.digital/products/soundlock.html"><strong>Website</strong></a> ·
-  <a href="https://github.com/lucasmancan/SoundLock/releases/latest"><strong>Download (free)</strong></a>
+  <a href="https://github.com/lumancx/SoundLock/releases/latest"><strong>Download (free)</strong></a>
 </p>
 
 <p align="center">
@@ -117,7 +117,7 @@ SoundLock is built around a single principle: do nothing unless the system tells
 
 ## Install
 
-1. Download the latest build from the [releases page](https://github.com/lucasmancan/SoundLock/releases/latest).
+1. Download the latest build from the [releases page](https://github.com/lumancx/SoundLock/releases/latest).
 2. Unzip and drag `SoundLock.app` to `/Applications`.
 3. Launch it, enable **Launch at login**, and forget about it.
 
@@ -157,7 +157,7 @@ while it is running shows the popover too.
 Requires macOS 13 or later and the Xcode Command Line Tools.
 
 ```bash
-git clone https://github.com/lucasmancan/SoundLock.git
+git clone https://github.com/lumancx/SoundLock.git
 cd SoundLock
 bash build.sh
 open SoundLock.app
@@ -189,7 +189,7 @@ Commercial or redistribution licenses are available on request.
 
 ## Support
 
-Questions, bug reports, or license issues: open an [issue](https://github.com/lucasmancan/SoundLock/issues) or reach out via [mancan.digital](https://mancan.digital).
+Questions, bug reports, or license issues: open an [issue](https://github.com/lumancx/SoundLock/issues) or reach out via [mancan.digital](https://mancan.digital).
 
 ---
 
