@@ -42,6 +42,10 @@ enum CoreAudioBridge {
                                           UInt32(MemoryLayout<AudioDeviceID>.size), &id)
     }
 
+    static func isAirPlay(_ deviceID: AudioDeviceID) -> Bool {
+        deviceTransportType(deviceID) == kAudioDeviceTransportTypeAirPlay
+    }
+
     // MARK: - Volume
 
     static func canControlVolume(_ deviceID: AudioDeviceID, input: Bool) -> Bool {

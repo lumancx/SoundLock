@@ -14,8 +14,11 @@ struct PriorityListSectionView: View {
         direction == .input ? monitor.priorityInputList : monitor.priorityOutputList
     }
 
+    /// Excludes AirPlay: the guard never switches away from it, so a list entry has no effect.
     private var addableDevices: [AudioDevice] {
-        connectedDevices.filter { !monitor.isRepresentedInPriority($0, input: direction == .input) }
+        connectedDevices.filter {
+            !$0.isAirPlay && !monitor.isRepresentedInPriority($0, input: direction == .input)
+        }
     }
 
     var body: some View {

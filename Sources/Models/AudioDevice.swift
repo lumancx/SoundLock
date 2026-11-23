@@ -46,6 +46,8 @@ struct AudioDevice: Identifiable, Equatable {
         return AudioDeviceIdentity.unique(keys)
     }
 
+    var isAirPlay: Bool { transportType == kAudioDeviceTransportTypeAirPlay }
+
     private var isWiredTransport: Bool {
         switch transportType {
         case kAudioDeviceTransportTypeBuiltIn,

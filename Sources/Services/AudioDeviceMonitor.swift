@@ -25,11 +25,13 @@ struct AudioHardware {
     var enumerate: () -> (output: [AudioDevice], input: [AudioDevice])
     var getDefault: (_ input: Bool) -> AudioDeviceID
     var setDefault: (_ id: AudioDeviceID, _ input: Bool) -> OSStatus
+    var isAirPlay: (_ id: AudioDeviceID) -> Bool = { _ in false }
 
     static let coreAudio = AudioHardware(
         enumerate: CoreAudioBridge.enumeratePhysicalDevices,
         getDefault: { CoreAudioBridge.getDefaultDevice(input: $0) },
-        setDefault: { CoreAudioBridge.setDefaultDevice($0, input: $1) }
+        setDefault: { CoreAudioBridge.setDefaultDevice($0, input: $1) },
+        isAirPlay: CoreAudioBridge.isAirPlay
     )
 }
 
@@ -61,6 +63,9 @@ final class AudioDeviceMonitor: ObservableObject {
         }
     }
 
+    /// The default output when it is an AirPlay device, else nil.
+    @Published private(set) var activeAirPlayOutput: AudioDevice?
+
     // MARK: - Dependencies
 
     let volume: AudioVolumeService
@@ -89,6 +94,10 @@ final class AudioDeviceMonitor: ObservableObject {
     }
     var currentPriorityInput: AudioDevice? {
         topConnected(list: priorityInputList, in: inputDevices, input: true)
+    }
+    /// Output the popover shows and controls: the device the user hears.
+    var displayedOutput: AudioDevice? {
+        activeAirPlayOutput ?? currentPriorityOutput
     }
 
     // MARK: - Init
@@ -143,6 +152,8 @@ final class AudioDeviceMonitor: ObservableObject {
 
         guard !isInitial, Date() >= promptsSuppressedUntil else { return }
         for device in out where !previousOutputUIDs.contains(device.uid) {
+            // An AirPlay device appears only once the user has selected it.
+            if device.isAirPlay { continue }
             if guardEnabled && currentPriorityOutput?.uid == device.uid { continue }
             if !guardEnabled && hardware.getDefault(false) == device.id { continue }
             onNewOutputDevice?(device)
@@ -252,8 +263,20 @@ final class AudioDeviceMonitor: ObservableObject {
     // MARK: - Private
 
     private func syncAudioState() {
-        volume.syncFromDevices(output: currentPriorityOutput, input: currentPriorityInput)
-        mute.syncFromDevices(output: currentPriorityOutput, input: currentPriorityInput)
+        updateActiveAirPlayOutput()
+        volume.syncFromDevices(output: displayedOutput, input: currentPriorityInput)
+        mute.syncFromDevices(output: displayedOutput, input: currentPriorityInput)
+    }
+
+    private func updateActiveAirPlayOutput() {
+        let current = hardware.getDefault(false)
+        var next: AudioDevice? = nil
+        if hardware.isAirPlay(current) {
+            // The default can change before the device list event arrives.
+            next = outputDevices.first { $0.id == current }
+                ?? hardware.enumerate().output.first { $0.id == current }
+        }
+        if next != activeAirPlayOutput { activeAirPlayOutput = next }
     }
 
     private func assertPriority(input: Bool) {
@@ -264,6 +287,8 @@ final class AudioDeviceMonitor: ObservableObject {
               let bestDevice = AudioDeviceIdentityResolver.matchDevice(for: bestEntry, in: connected, input: input)
         else { return }
         let current = hardware.getDefault(input)
+        // Keep an AirPlay output: macOS never selects AirPlay on its own, so the user chose it.
+        if !input, hardware.isAirPlay(current) { return }
         if current != bestDevice.id {
             let err = hardware.setDefault(bestDevice.id, input)
             if err != noErr {

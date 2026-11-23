@@ -16,7 +16,7 @@ struct ContentView: View {
                     direction: .output,
                     volume: volume,
                     mute: mute,
-                    deviceName: monitor.currentPriorityOutput?.name
+                    deviceName: monitor.displayedOutput?.name
                 )
                 VolumeControlView(
                     direction: .input,

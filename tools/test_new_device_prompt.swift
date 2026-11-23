@@ -31,6 +31,7 @@ private let robertaIn = device(147, "E4-43-89-32-15-EB:input", "AirPods de Rober
 private let lucasOut = device(151, "AA-BB-CC-DD-EE-FF:output", "AirPods do Lucas", model: "2019 4c", transport: kAudioDeviceTransportTypeBluetooth, output: true)
 private let lucasIn = device(152, "AA-BB-CC-DD-EE-FF:input", "AirPods do Lucas", model: "2019 4c", transport: kAudioDeviceTransportTypeBluetooth, output: false)
 private let monitorHDMI = device(160, "HDMI-LG-27", "LG UltraFine", model: "LG27", transport: kAudioDeviceTransportTypeHDMI, output: true)
+private let airPlay = device(180, "AirPlay-Test-Audio", "AirPlay", model: "AirPlay-Test-Audio", transport: kAudioDeviceTransportTypeAirPlay, output: true)
 private let usbMic = device(170, "USB-fifine", "fifine Microphone", model: "fifine", transport: kAudioDeviceTransportTypeUSB, output: false)
 
 private final class Rig {
@@ -64,7 +65,8 @@ private final class Rig {
                 self.setCalls.append((id, input))
                 if input { self.defaultInput = id } else { self.defaultOutput = id }
                 return noErr
-            }
+            },
+            isAirPlay: { [unowned self] id in self.outputs.contains { $0.id == id && $0.isAirPlay } }
         )
         monitor = AudioDeviceMonitor(volume: AudioVolumeService(), mute: AudioMuteService(),
                                      repository: PriorityListRepository(), hardware: hardware)
@@ -101,6 +103,15 @@ private final class Rig {
     func osSwitchesDefault(to device: AudioDevice) {
         if device.supportsOutput { defaultOutput = device.id } else { defaultInput = device.id }
         monitor.handleDeviceChange(input: !device.supportsOutput)
+    }
+
+    /// macOS adds the AirPlay device and makes it default in one step.
+    func userSelectsAirPlay(settle: TimeInterval = 4) {
+        outputs.append(airPlay)
+        defaultOutput = airPlay.id
+        monitor.handleDeviceChange(input: false)
+        monitor.handleDeviceListChange()
+        drain(settle)
     }
 
     func outputOrder() -> [String] { monitor.priorityOutputList.map(\.name) }
@@ -553,6 +564,38 @@ private func runScenarios() {
         expect(rig.setCalls.isEmpty, "no default set for a gone device")
         expect(rig.defaultOutput == speakers.id, "stays on speakers")
         expect(rig.outputOrder() == [speakers.name], "gone device not promoted")
+        rig.tearDown()
+    }
+
+    scenario("AirPlay selected by the user is kept, no prompt, popover follows it") {
+        let rig = Rig(outputs: [speakers], inputs: [builtInMic], outputPriority: [speakers])
+        rig.promptsEnabled = false
+        rig.userSelectsAirPlay()
+        expect(rig.defaultOutput == airPlay.id, "guard keeps AirPlay")
+        expect(rig.setCalls.isEmpty, "no default set while on AirPlay")
+        expect(rig.prompts.isEmpty, "no prompt for AirPlay")
+        expect(rig.monitor.activeAirPlayOutput?.uid == airPlay.uid, "AirPlay reported active")
+        expect(rig.monitor.displayedOutput?.uid == airPlay.uid, "popover controls AirPlay")
+        rig.tearDown()
+    }
+
+    scenario("AirPlay does not keep input from priority") {
+        let rig = Rig(outputs: [speakers], inputs: [builtInMic, usbMic], outputPriority: [speakers], inputPriority: [usbMic])
+        rig.userSelectsAirPlay()
+        rig.osSwitchesDefault(to: builtInMic)
+        expect(rig.defaultInput == usbMic.id, "input priority still applied")
+        rig.tearDown()
+    }
+
+    scenario("leaving AirPlay resumes output priority") {
+        let rig = Rig(outputs: [speakers, monitorHDMI], inputs: [builtInMic], outputPriority: [speakers, monitorHDMI])
+        rig.promptsEnabled = false
+        rig.userSelectsAirPlay()
+        rig.osSwitchesDefault(to: monitorHDMI)
+        expect(rig.defaultOutput == speakers.id, "guard restores top priority device")
+        expect(rig.monitor.activeAirPlayOutput == nil, "AirPlay no longer active")
+        rig.disconnect(airPlay)
+        expect(rig.defaultOutput == speakers.id, "stays on top priority device")
         rig.tearDown()
     }
 
